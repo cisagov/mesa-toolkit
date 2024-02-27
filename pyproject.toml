@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "MESA-Toolkit"
+version = "0.1.0"
+description = ""
+authors = ["Miguel Rios <miguel.rios@trio.dhs.gov>"]
+readme = "README.md"
+homepage = "https://github.com/m1j09830/MESA-Toolkit"
+repository = "https://github.com/m1j09830/MESA-Toolkit"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+rich = "^12.5.1"
+typer = "^0.6.1"
+jinja2 = "^3.1.3"
+
+[tool.poetry.dev-dependencies]
+pylint = "^2.13"
+pytest = "^7.1.2"
+pytest-mock = "^3.11.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+MESA-Toolkit = "mesa_toolkit.__main__:app"
