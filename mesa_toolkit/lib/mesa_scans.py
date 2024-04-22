@@ -225,19 +225,21 @@ def vuln_scans(rv_num, input_file=None, exclude_file=None):
     os.system('mkdir -p '+vuln_scan_folders)
     os.chdir(vuln_scan_folders)
 
-    run_command('nuclei -l '+input_file+' -etags default-login -headless -j -o '+rv_num+'_Vulnerability_Scan.txt', write_start_file=True)
+    run_command('nuclei -l '+input_file+' -etags default-login -s critical,high,medium -headless -j -o '+rv_num+'_Vulnerability_Scan.txt', write_start_file=True)
     run_command('cat '+rv_num+'_Vulnerability_Scan.txt |jq > '+rv_num+'_all_findings.json')
     run_command('cat '+rv_num+'_Vulnerability_Scan.txt |grep \'"severity"\':\'"critical"\'|jq > '+rv_num+'_critical_findings.json')
     run_command('cat '+rv_num+'_Vulnerability_Scan.txt |grep \'"severity"\':\'"high"\'|jq > '+rv_num+'_high_findings.json')
     run_command('cat '+rv_num+'_Vulnerability_Scan.txt |grep \'"severity"\':\'"medium"\'|jq > '+rv_num+'_medium_findings.json')
-    run_command('cat '+rv_num+'_Vulnerability_Scan.txt |grep \'"severity"\':\'"low"\'|jq > '+rv_num+'_low_findings.json')
-    run_command('cat '+rv_num+'_Vulnerability_Scan.txt |grep \'"severity"\':\'"info"\'|jq > '+rv_num+'_informational_findings.json')
-    run_command('cat '+rv_num+'_Vulnerability_Scan.txt |grep \'"severity"\':\'"unknown"\'|jq > '+rv_num+'_unknown_findings.json')
+    # Leaving these lines in the event that these findings get incorporated back into the scans
+    #run_command('cat '+rv_num+'_Vulnerability_Scan.txt |grep \'"severity"\':\'"low"\'|jq > '+rv_num+'_low_findings.json')
+    #run_command('cat '+rv_num+'_Vulnerability_Scan.txt |grep \'"severity"\':\'"info"\'|jq > '+rv_num+'_informational_findings.json')
+    #run_command('cat '+rv_num+'_Vulnerability_Scan.txt |grep \'"severity"\':\'"unknown"\'|jq > '+rv_num+'_unknown_findings.json')
     run_command('cat '+rv_num+'_critical_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_critical_affected_hosts.txt')
     run_command('cat '+rv_num+'_high_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_high_affected_hosts.txt')
     run_command('cat '+rv_num+'_medium_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_medium_affected_hosts.txt')
-    run_command('cat '+rv_num+'_low_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_low_affected_hosts.txt')
-    run_command('cat '+rv_num+'_informational_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_informational_affected_hosts.txt', write_complete_file=True)
+    # Leaving these lines in the event that these findings get incorporated back into the scans
+    #run_command('cat '+rv_num+'_low_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_low_affected_hosts.txt')
+    #run_command('cat '+rv_num+'_informational_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_informational_affected_hosts.txt', write_complete_file=True)
 
     cleanup_empty_files()
     os.chdir(home)
