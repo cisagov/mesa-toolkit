@@ -182,7 +182,7 @@ def full_port(rv_num, input_file=None, exclude_file=None):
 
     nmap_folders_full = rv_num+NMAP_FOLDERS_FULL
     os.system('mkdir -p '+nmap_folders_full)
-    run_command('nmap -Pn -n -sV -p- --min-hostgroup 255 --min-rtt-timeout 0ms --max-rtt-timeout 100ms --max-retries 1 --max-scan-delay 0 --min-rate 2000 -vvv --open -oA '+nmap_folders_full+rv_num+'_FULL'+' '+'-iL '+input_file, path=nmap_folders_full, write_start_file=True)
+    run_command('nmap -Pn -n -p- --min-hostgroup 255 --min-rtt-timeout 0ms --max-rtt-timeout 100ms --max-retries 1 --max-scan-delay 0 --min-rate 2000 -vvv --open -oA '+nmap_folders_full+rv_num+'_FULL'+' '+'-iL '+input_file, path=nmap_folders_full, write_start_file=True)
     os.chdir(nmap_folders_full)
     run_gnmap_parser()
     mark_folder_complete(completion_status="0")
