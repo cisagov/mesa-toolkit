@@ -1,3 +1,3 @@
 # Changelog
-## [v0.1.0] - XX/XX/XXXX
-- Initial commit
+## [v0.3.0] - 04/26/2024
+- Add ability to provide exclude file to full port scan operation
