@@ -1,3 +1,3 @@
 # Changelog
-## [v0.4.0] - 04/26/2024
-- Add ability to provide exclude file to full port scan operation
+## [v0.5.0] - 04/29/2024
+- Ensure .complete file is created after vulnerability scans complete. This is necessary for MESA-GUI to recognize when the vulnerability scans are done running. 

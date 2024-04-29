@@ -239,7 +239,7 @@ def vuln_scans(rv_num, input_file=None, exclude_file=None):
     #run_command('cat '+rv_num+'_Vulnerability_Scan.txt |grep \'"severity"\':\'"unknown"\'|jq > '+rv_num+'_unknown_findings.json')
     run_command('cat '+rv_num+'_critical_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_critical_affected_hosts.txt')
     run_command('cat '+rv_num+'_high_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_high_affected_hosts.txt')
-    run_command('cat '+rv_num+'_medium_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_medium_affected_hosts.txt')
+    run_command('cat '+rv_num+'_medium_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_medium_affected_hosts.txt', write_complete_file=True)
     # Leaving these lines in the event that these findings get incorporated back into the scans
     #run_command('cat '+rv_num+'_low_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_low_affected_hosts.txt')
     #run_command('cat '+rv_num+'_informational_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_informational_affected_hosts.txt', write_complete_file=True)
