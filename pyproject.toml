@@ -11,7 +11,7 @@ repository = "https://github.com/m1j09830/MESA-Toolkit"
 python = "^3.9"
 rich = "^12.5.1"
 typer = "^0.6.1"
-jinja2 = "^3.1.3"
+jinja2 = "^3.1.4"
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.13"
