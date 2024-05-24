@@ -1,4 +1,7 @@
 # Changelog
+## [v0.4.2] - 05/24/2024
+- Remove unnecessary and bloated .cache folder generated from vulnerability scans and default logins scans.
+
 ## [v0.4.1] - 04/29/2024
 - Ensure .complete file is created after vulnerability scans complete. This is necessary for MESA-GUI to recognize when the vulnerability scans are done running. 
 
