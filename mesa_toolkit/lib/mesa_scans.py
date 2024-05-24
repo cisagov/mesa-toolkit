@@ -244,6 +244,7 @@ def vuln_scans(rv_num, input_file=None, exclude_file=None):
     #run_command('cat '+rv_num+'_low_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_low_affected_hosts.txt')
     #run_command('cat '+rv_num+'_informational_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_informational_affected_hosts.txt', write_complete_file=True)
 
+    run_command('rm -rf .cache')
     cleanup_empty_files()
     os.chdir(home)
 
@@ -297,7 +298,8 @@ def default_logins(rv_num, input_file=None, exclude_file=None):
     run_command('cat '+rv_num+'_default_logins_medium_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_default_logins_medium_affected_hosts.txt')
     run_command('cat '+rv_num+'_default_logins_low_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_default_logins_low_affected_hosts.txt')
     run_command('cat '+rv_num+'_default_logins_informational_findings.json |jq -r \'.info.severity + " - " + .info.name + " - " + .host\'|sort -u > '+rv_num+'_default_logins_informational_affected_hosts.txt', write_complete_file=True)
-
+    
+    run_command('rm -rf .cache')
     print(list(os.walk(default_logins_folders)))
     cleanup_empty_files()
     os.chdir(home)
@@ -451,10 +453,6 @@ def report_generator(rv_num, customer_name, customer_initials):
 
     # Call the function to remove files with specified extensions
     remove_files_with_extensions(root_directory, extensions_to_remove)
-
-    # Remove bloated cache files
-    os.system(f"rm -rf /root/.mesa/projects/data/{rv_num}-all_checks/Vulnerability_Scans/.cache")
-    os.system(f"rm -rf /root/.mesa/projects/data/{rv_num}-all_checks/Insecure_Default_Configuration/Default_Logins/.cache")
 
     # Define locations for input files
     scope_file = f"data/{rv_num}-all_checks/scope.txt"
