@@ -32,11 +32,44 @@ home=$(pwd)
 # Install tools with apt
 apt update
 apt install ufw -y
-apt install neo4j -y
 apt install python3.11-venv -y
 apt install chromium -y
 apt install jq -y
-apt install golang-go -y
+apt install nmap -y
+apt install sslscan -y
+apt install pipx -y
+apt install git -y
+apt install curl -y
+apt install zip -y
+
+# Install the latest version of GO
+# Select the latest package for your architecture from https://golang.org/dl/ and download it.
+VERSION_NUMBER=$(curl -s https://go.dev/VERSION?m=text | grep go | sed 's/go//')
+wget -P /tmp "https://golang.org/dl/go${VERSION_NUMBER}.linux-amd64.tar.gz"
+# Extract the Golang executable to /usr/local.
+sudo tar -C /usr/local -xzf "/tmp/go${VERSION_NUMBER}.linux-amd64.tar.gz"
+# Create a symbolic link to /usr/bin
+sudo ln -s /usr/local/go/bin/go /usr/bin/go
+# Clean up
+rm "/tmp/go${VERSION_NUMBER}.linux-amd64.tar.gz"
+# Verify the installation
+if command -v go &> /dev/null
+then
+    echo "Golang ${VERSION_NUMBER} has been installed and is available in your PATH."
+else
+    echo "Golang installation failed or is not in your PATH."
+fi
+
+
+# Install NetExec
+pipx ensurepath
+pipx install git+https://github.com/Pennyw0rth/NetExec
+
+# Install neo4j on Debian
+wget -O - https://debian.neo4j.com/neotechnology.gpg.key | sudo apt-key add -
+echo 'deb https://debian.neo4j.com stable 4.4' | sudo tee /etc/apt/sources.list.d/neo4j.list
+apt update
+apt install neo4j -y
 
 # Start neo4j service
 cd /usr/share/neo4j/bin/
@@ -47,7 +80,7 @@ cd $home
 update-alternatives --set java $(update-alternatives --list java | grep java-11)
 
 # Install nuclei and update templates
-go install -v github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
+go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
 cp /root/go/bin/nuclei /usr/bin/
 nuclei -ut
 

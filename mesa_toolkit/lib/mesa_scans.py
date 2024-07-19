@@ -339,7 +339,7 @@ def smb_signing_check(rv_num, input_file=None, exclude_file=None):
     smb_signing_folders = rv_num+SMB_SIGNING_FOLDERS
     os.system('mkdir -p '+smb_signing_folders)
     os.chdir(smb_signing_folders)
-    run_command('crackmapexec smb '+input_file+' --gen-relay-list '+rv_num+'_SMB_Signing_Disabled.txt|tee '+rv_num+'_SMB_Signing_Results.txt', write_start_file=True, write_complete_file=True)
+    run_command('nxc smb '+input_file+' --gen-relay-list '+rv_num+'_SMB_Signing_Disabled.txt --log '+rv_num+'_SMB_Signing_Results.txt', write_start_file=True, write_complete_file=True)
     os.chdir(home)
 
 def pass_policy_check(rv_num, dc_ip, domain_user, domain_pass):
@@ -347,7 +347,7 @@ def pass_policy_check(rv_num, dc_ip, domain_user, domain_pass):
     pass_policy_folders = rv_num+PASS_POLICY_FOLDERS
     os.system('mkdir -p '+pass_policy_folders)
     os.chdir(pass_policy_folders)
-    run_command('crackmapexec smb '+dc_ip+' -u '+domain_user+' -p '+domain_pass+' --pass-pol |tee '+rv_num+'_Password_Policy_Results.txt', write_start_file=True, write_complete_file=True)
+    run_command('nxc smb '+dc_ip+' -u '+domain_user+' -p '+domain_pass+' --pass-pol --log '+rv_num+'_Password_Policy_Results.txt', write_start_file=True, write_complete_file=True)
     os.chdir(home)
 
 # TODO: Once the domain collection fuctions have been finalized the commented selection below can be used.

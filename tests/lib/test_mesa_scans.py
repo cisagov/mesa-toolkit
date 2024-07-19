@@ -790,7 +790,7 @@ class TestSmbSigningCheck():
             call(f'mkdir -p {smb_signing_check_folders}')
         ])
         mock_runcommand.assert_has_calls([
-            call(f'crackmapexec smb hosts.txt --gen-relay-list {rv_num}_SMB_Signing_Disabled.txt|tee {rv_num}_SMB_Signing_Results.txt', write_start_file=True, write_complete_file=True)
+            call(f'nxc smb hosts.txt --gen-relay-list {rv_num}_SMB_Signing_Disabled.txt --log {rv_num}_SMB_Signing_Results.txt', write_start_file=True, write_complete_file=True)
         ])
         mock_chdir.assert_has_calls([
             call(f'{smb_signing_check_folders}'),
@@ -818,7 +818,7 @@ class TestSmbSigningCheck():
             call(f'mkdir -p {smb_signing_check_folders}')
         ])
         mock_runcommand.assert_has_calls([
-            call(f'crackmapexec smb {input_file} --gen-relay-list {rv_num}_SMB_Signing_Disabled.txt|tee {rv_num}_SMB_Signing_Results.txt', write_start_file=True, write_complete_file=True)
+            call(f'nxc smb {input_file} --gen-relay-list {rv_num}_SMB_Signing_Disabled.txt --log {rv_num}_SMB_Signing_Results.txt', write_start_file=True, write_complete_file=True)
         ])
         mock_chdir.assert_has_calls([
             call(f'{smb_signing_check_folders}'),
@@ -854,7 +854,7 @@ class TestPassPolicyCheck():
             call(f'mkdir -p {pass_policy_folders}')
         ])
         mock_run_command.assert_has_calls([
-            call(f'crackmapexec smb {dc_ip} -u {domain_user} -p {domain_pass} --pass-pol |tee {rv_num}_Password_Policy_Results.txt', write_start_file=True, write_complete_file=True)
+            call(f'nxc smb {dc_ip} -u {domain_user} -p {domain_pass} --pass-pol --log {rv_num}_Password_Policy_Results.txt', write_start_file=True, write_complete_file=True)
         ])
 
         mock_getcwd.assert_called_once()
