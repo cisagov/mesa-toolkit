@@ -64,6 +64,7 @@ fi
 # Install NetExec
 pipx ensurepath
 pipx install git+https://github.com/Pennyw0rth/NetExec
+cp /root/.local/bin/* /usr/bin/
 
 # Install neo4j on Debian
 wget -O - https://debian.neo4j.com/neotechnology.gpg.key | sudo apt-key add -
