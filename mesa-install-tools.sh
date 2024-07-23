@@ -65,6 +65,7 @@ fi
 pipx ensurepath
 pipx install git+https://github.com/Pennyw0rth/NetExec
 cp /root/.local/bin/* /usr/bin/
+nxc --version
 
 # Install nuclei and update templates
 go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
