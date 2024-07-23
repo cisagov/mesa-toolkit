@@ -304,31 +304,6 @@ def default_logins(rv_num, input_file=None, exclude_file=None):
     cleanup_empty_files()
     os.chdir(home)
 
-def domain_enum(rv_num, domain, dc_ip, domain_user, domain_pass, neo4j_user, neo4j_pass):
-    home = os.getcwd()
-    domainenum_folders = rv_num+DOMAINENUM_FOLDERS
-    os.system('mkdir -p '+domainenum_folders)
-    os.chdir(home+'/'+domainenum_folders)
-    os.system('mkdir -p BloodHound')
-    os.chdir(home+'/'+domainenum_folders+'BloodHound')
-    run_command('bloodhound-python -c All -d '+str(domain)+' -u '+str(domain_user)+' -p '+str(domain_pass)+' -ns '+str(dc_ip)+' --zip', write_start_file=True)
-    os.chdir(home+'/'+domainenum_folders)
-    os.system('mkdir -p Database_Repo')
-    os.chdir(home+'/'+domainenum_folders+'Database_Repo')
-    run_command('knowsmore --create-db')
-    directory = home+'/'+domainenum_folders+'BloodHound'
-    for filename in os.listdir(directory):
-        if os.path.isfile(os.path.join(directory, filename)):
-            if os.path.splitext(filename)[1] == ".zip":
-                run_command('knowsmore --bloodhound --import-data '+home+'/'+domainenum_folders+'BloodHound/'+filename)
-    run_command('knowsmore --bloodhound --sync-to 127.0.0.1:7687 -d neo4j -u '+neo4j_user+' -p '+neo4j_pass)
-    os.chdir(home+'/'+domainenum_folders)
-    shutil.rmtree('Database_Repo')
-    os.system('mkdir -p '+home+'/'+domainenum_folders+'Domain_Findings/')
-    os.chdir(home+'/'+domainenum_folders+'Domain_Findings/')
-    run_command('bloodhunt -u '+neo4j_user+' -p '+neo4j_pass+' -q all', write_complete_file=True)
-    os.chdir(home)
-
 def smb_signing_check(rv_num, input_file=None, exclude_file=None):
     home = os.getcwd()
     if input_file is None:
@@ -339,19 +314,9 @@ def smb_signing_check(rv_num, input_file=None, exclude_file=None):
     smb_signing_folders = rv_num+SMB_SIGNING_FOLDERS
     os.system('mkdir -p '+smb_signing_folders)
     os.chdir(smb_signing_folders)
-    run_command('crackmapexec smb '+input_file+' --gen-relay-list '+rv_num+'_SMB_Signing_Disabled.txt|tee '+rv_num+'_SMB_Signing_Results.txt', write_start_file=True, write_complete_file=True)
+    run_command('nxc smb '+input_file+' --gen-relay-list '+rv_num+'_SMB_Signing_Disabled.txt --log '+rv_num+'_SMB_Signing_Results.txt', write_start_file=True, write_complete_file=True)
     os.chdir(home)
 
-def pass_policy_check(rv_num, dc_ip, domain_user, domain_pass):
-    home = os.getcwd()
-    pass_policy_folders = rv_num+PASS_POLICY_FOLDERS
-    os.system('mkdir -p '+pass_policy_folders)
-    os.chdir(pass_policy_folders)
-    run_command('crackmapexec smb '+dc_ip+' -u '+domain_user+' -p '+domain_pass+' --pass-pol |tee '+rv_num+'_Password_Policy_Results.txt', write_start_file=True, write_complete_file=True)
-    os.chdir(home)
-
-# TODO: Once the domain collection fuctions have been finalized the commented selection below can be used.
-#def all_checks(rv_num, domain, dc_ip, domain_user, domain_pass, neo4j_user, neo4j_pass, input_file=None, exclude_file=None):
 def all_checks(rv_num, input_file=None, exclude_file=None):
     home = os.getcwd()
 
@@ -412,18 +377,6 @@ def all_checks(rv_num, input_file=None, exclude_file=None):
     print('Running Full Port Nmap Scans...')
     print(' ')
     full_port(rv_num, live_targets, exclude_file=exclude_file)
-
-    # ### DOMAIN ENUM
-    # print(' ')
-    # print('Running Domain Enumeration Scans...')
-    # print(' ')
-    # domain_enum(rv_num, domain, dc_ip, domain_user, domain_pass, neo4j_user, neo4j_pass)
-
-    # ### PASSWORD POLICY
-    # print(' ')
-    # print('Running Password Policy Scans...')
-    # print(' ')
-    # pass_policy_check(rv_num, dc_ip, domain_user, domain_pass)
 
 def report_generator(rv_num, customer_name, customer_initials):
     # Define the template file to be used

@@ -9,15 +9,13 @@ It is important to note that MESAs are not designed to furnish a comprehensive u
 The following tools must be installed on the system:
 * Aquatone (https://github.com/michenriksen/aquatone)
 * Nmap (https://nmap.org/)
-* Nuclei (https://github.com/projectdiscovery/nuclei.git)
-* Gnmap-Parser (https://github.com/m1j09830/gnmap-parser.git)
-* bloodhunt (https://github.com/coffeegist/bloodhunt/tree/initial)
-* Bloodhound.py (https://github.com/dirkjanm/BloodHound.py.git)
-* neo4j 
+* Nuclei (https://github.com/projectdiscovery/nuclei)
+* Gnmap-Parser (https://github.com/m1j09830/gnmap-parser)
+* NetExec (https://github.com/Pennyw0rth/NetExec)
 
 These dependencies can be installed via the `mesa-install-tools.sh` script. All dependencies including the tool itself will be created in a virtual environment located with the `/opt` directory. 
 
-To install the tool on a virtual machine run the following string:
+To install the tool on a Debian 12 virtual machine run the following string:
 
 ```
 bash mesa-install-tools.sh -vm
@@ -76,22 +74,10 @@ MESA-Toolkit -o encryption_check -p <Project_Name> -i <Target_File>
 MESA-Toolkit -o default_logins -p <Project_Name> -i <Target_File>
 ```
 
-`domain_enum` - This operation provides customers with a map of their current active directory structure while also providing insight into common misconfigurations that can lead to potential attack paths.
-
-```
-MESA-Toolkit -o domain_enum -p <Project_Name> -d <Domain> -dc <Domain Controller IP> -du <Domain User> -dp <User Password> -nu <Neo4j User> -np <Neo4j Password> -i <Target_File>
-```
-
 `smb_signing_check` - This operation provides customers with insight into any windows systems lacking smb signing within the tested environment. 
 
 ```
 MESA-Toolkit -o smb_signing_check -p <Project Name> -i <Target_File>
-```
-
-`pass_policy_check` - This operation will provide a insight into the current password policy configuration set for the domain being targeted.
-
-```
-MESA-Toolkit -o pass_policy_check -p <Project_Name> -dc <Domain Controller IP> -du <Domain User> -dp <User Password> -i <Target_File>
 ```
 
 `vuln_scans` - This operation will perform vulnerability scans using nuclei, a template based vulnerability scanner.
@@ -103,7 +89,7 @@ MESA-Toolkit -o vuln_scans -p <Project_Name> -i <Target_File>
 `all_checks` - This operation is designed to streamline the testing process by performing all of the previously mentioned tests.
 
 ```
-MESA-Toolkit -o all_checks -p <Project_Name> -i <Target_File> [-e Exclude_File] -d <Domain> -dc <Domain Controller IP> -du <Domain User> -dp <User Password> -nu <Neo4j User> -np <Neo4j Password>
+MESA-Toolkit -o all_checks -p <Project_Name> -i <Target_File> [-e Exclude_File]
 ```
 
 `report_generator` - This operation will create a report with hyperlinks referencing the results collected from the scans performed. This operation should only be ran once the following operations have been performed (discovery, aquatone, encryption_check, default_logins, vuln_scans, and smb_signing_check)

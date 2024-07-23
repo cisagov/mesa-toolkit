@@ -32,22 +32,43 @@ home=$(pwd)
 # Install tools with apt
 apt update
 apt install ufw -y
-apt install neo4j -y
 apt install python3.11-venv -y
 apt install chromium -y
 apt install jq -y
-apt install golang-go -y
+apt install nmap -y
+apt install sslscan -y
+apt install pipx -y
+apt install git -y
+apt install curl -y
+apt install zip -y
+apt install gcc make libpcap-dev -y
 
-# Start neo4j service
-cd /usr/share/neo4j/bin/
-set +o history
-./neo4j-admin set-initial-password BloodHound
-neo4j start &
-cd $home
-update-alternatives --set java $(update-alternatives --list java | grep java-11)
+# Install the latest version of GO
+# Select the latest package for your architecture from https://golang.org/dl/ and download it.
+VERSION_NUMBER=$(curl -s https://go.dev/VERSION?m=text | grep go | sed 's/go//')
+wget -P /tmp "https://golang.org/dl/go${VERSION_NUMBER}.linux-amd64.tar.gz"
+# Extract the Golang executable to /usr/local.
+sudo tar -C /usr/local -xzf "/tmp/go${VERSION_NUMBER}.linux-amd64.tar.gz"
+# Create a symbolic link to /usr/bin
+sudo ln -s /usr/local/go/bin/go /usr/bin/go
+# Clean up
+rm "/tmp/go${VERSION_NUMBER}.linux-amd64.tar.gz"
+# Verify the installation
+if command -v go &> /dev/null
+then
+    echo "Golang ${VERSION_NUMBER} has been installed and is available in your PATH."
+else
+    echo "Golang installation failed or is not in your PATH."
+fi
+
+# Install NetExec
+pipx ensurepath
+pipx install git+https://github.com/Pennyw0rth/NetExec
+cp /root/.local/bin/* /usr/bin/
+nxc --version
 
 # Install nuclei and update templates
-go install -v github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
+go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
 cp /root/go/bin/nuclei /usr/bin/
 nuclei -ut
 
@@ -58,9 +79,8 @@ mv aquatone /usr/bin/
 rm aquatone_linux_amd64_1.7.0.zip LICENSE.txt README.md
 
 # Clone git repositories
-git clone https://github.com/fox-it/BloodHound.py.git
-git clone --branch initial https://github.com/coffeegist/bloodhunt.git
 git clone https://github.com/m1j09830/gnmap-parser.git
+git clone https://github.com/robertdavidgraham/masscan
 
 # Install MESA-Toolkit dependencies
 python3 -m venv MESA-venv
@@ -68,10 +88,9 @@ source MESA-venv/bin/activate
 cd BloodHound.py/
 pip install .
 cd $home
-cd bloodhunt/
-pip install .
-cd $home
-pip install --upgrade knowsmore
+cd masscan
+make
+make install
 cd $start
 pip install .
 
@@ -121,14 +140,6 @@ apt install chromium -y
 apt install jq -y
 apt install golang-go -y
 
-# Start neo4j service
-cd /usr/share/neo4j/bin/
-set +o history
-./neo4j-admin set-initial-password BloodHound
-neo4j start &
-cd $home
-update-alternatives --set java $(update-alternatives --list java | grep java-11)
-
 # Install nuclei and update templates
 go install -v github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
 cp /root/go/bin/nuclei /usr/bin/
@@ -141,20 +152,11 @@ mv aquatone /usr/bin/
 rm aquatone_linux_arm64_1.7.0.zip LICENSE.txt README.md
 
 # Clone git repositories
-git clone https://github.com/fox-it/BloodHound.py.git
-git clone --branch initial https://github.com/coffeegist/bloodhunt.git
 git clone https://github.com/m1j09830/gnmap-parser.git
 
 # Install MESA-Toolkit dependencies
 python3 -m venv MESA-venv
 source MESA-venv/bin/activate
-cd BloodHound.py/
-pip install .
-cd $home
-cd bloodhunt/
-pip install .
-cd $home
-pip install --upgrade knowsmore
 cd $start
 pip install .
 
