@@ -416,14 +416,29 @@ def report_generator(rv_num, customer_name, customer_initials):
 
     # Define a function to count lines in a file and remove leading whitespace
     def count_lines(filename):
+        if not os.path.exists(filename):
+            return 0
         with open(filename, 'r') as file:
             return len([line.strip() for line in file.readlines()])
 
+    # Define a function to count unique vulnerabilities
+    def count_unique_vulns():
+        unique_vulns_set = set()
+        for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*affected_hosts.txt"):
+            with open(file) as f:
+                for line in f:
+                    vuln_id = line.split('_')[1]
+                    unique_vulns_set.add(vuln_id)
+        return len(unique_vulns_set)
+
     # Execute nmap command and count scanned hosts
-    command = f"nmap -Pn -n -sL -iL {scope_file} --excludefile {exclusions_file} | cut -d ' ' -f 5 | grep -v 'nmap\\|address' | wc -l | sed 's/^[[:space:]]*//g'"
-    output = subprocess.check_output(command, shell=True, text=True)
-    scanned_hosts = int(output.strip())
-    os.system(f"nmap -Pn -n -sL -iL {scope_file} --excludefile {exclusions_file} | cut -d ' ' -f 5 | grep -v 'nmap\\|address' > data/{rv_num}-all_checks/consolidated_scope.txt")
+    try:
+        command = f"nmap -Pn -n -sL -iL {scope_file} --excludefile {exclusions_file} | cut -d ' ' -f 5 | grep -v 'nmap\\|address' | wc -l | sed 's/^[[:space:]]*//g'"
+        output = subprocess.check_output(command, shell=True, text=True)
+        scanned_hosts = int(output.strip())
+        os.system(f"nmap -Pn -n -sL -iL {scope_file} --excludefile {exclusions_file} | cut -d ' ' -f 5 | grep -v 'nmap\\|address' > data/{rv_num}-all_checks/consolidated_scope.txt")
+    except subprocess.CalledProcessError:
+        scanned_hosts = 0
 
     # Count live hosts
     live_hosts = count_lines(discovery_file)
@@ -441,7 +456,7 @@ def report_generator(rv_num, customer_name, customer_initials):
     default_logins = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/Default_Logins/*affected_hosts.txt"))
 
     # Count unique vulnerabilities
-    unique_vulns = len(set(line.split('-')[1] for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*affected_hosts.txt") for line in open(file)))
+    unique_vulns = count_unique_vulns()
 
     # Count critical vulnerabilities
     critical_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_critical_affected_hosts.txt"))
