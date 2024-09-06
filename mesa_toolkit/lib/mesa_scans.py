@@ -11,6 +11,8 @@ from mesa_toolkit.logger import logger
 import json
 from jinja2 import Template
 import glob
+import pdfkit
+import re
 
 STARTED_FILE = '.started'
 RUNNING_FILE = '.running'
@@ -509,11 +511,31 @@ def report_generator(rv_num, customer_name, customer_initials):
     output_file = f"output/{rv_num}/report/{customer_name}-Report.html"
     with open(output_file, 'w') as output_file:
         output_file.write(rendered_html)
+   
+    # Store the cwd
+    current_dir = os.getcwd()
+
+    # Create a modified, temporary version of the html file that was just created to convert into a pdf
+    # The head commands are grabbing applicable sections of the html file, and discarding the rest
+    os.system(f'head -n 149 "{current_dir}/output/{rv_num}/report/{customer_name}-Report.html" > tmp.html')
+    os.system(f'tail -n +153 "{current_dir}/output/{rv_num}/report/{customer_name}-Report.html" >> tmp.html')
+
+    #os.system(f'head -n 230 "{current_dir}/output/{rv_num}/report/{customer_name}-Report.html" > tmp.html')
+    os.system(f'echo "  </body>" >> tmp.html')
+    os.system(f'echo "</html>" >> tmp.html')
+    
+
+    # Create a pdf based off of the modified html file
+    os.system(f'wkhtmltopdf --disable-internal-links --keep-relative-links --enable-local-file-access --log-level error tmp.html "{current_dir}/output/{rv_num}/report/{customer_name}-Report.pdf"')
+    # Modify the paths in the pdf file to be relative and not specific to root
+    os.system(f"sed -i 's|file:///root/.mesa/|../|g' '{current_dir}/output/{rv_num}/report/{customer_name}-Report.pdf'")
+    # Remove the temporary html file now that the pdf is fully created
+    os.system('rm tmp.html')
 
     # Create deliverable zip file to provide to the customer
     os.system(f'cp -r data/{rv_num}-all_checks output/{rv_num}/data')
     os.system(f'cp -r {template_directory}/digest_images output/{rv_num}/data')
-    os.system(f'zip -rv {customer_initials}-Customer-Report.zip output/{rv_num}/data "output/{rv_num}/report/{customer_name}-Report.html"')
+    os.system(f'zip -rv {customer_initials}-Customer-Report.zip output/{rv_num}/data "output/{rv_num}/report/{customer_name}-Report.html" "output/{rv_num}/report/{customer_name}-Report.pdf"')
     os.system(f'mv {customer_initials}-Customer-Report.zip output/{rv_num}/customer_deliverable')
 
     # Remove variables.json after report generation
@@ -521,3 +543,334 @@ def report_generator(rv_num, customer_name, customer_initials):
 
     # Remove data directory
     os.system("rm -rf data")
+
+def json_generator(rv_num, customer_name, customer_initials):
+    # Define the template file to be used
+    template_file = "/opt/MESA-Toolkit/mesa-report-generator/templates/template.html"
+    template_directory = "/opt/MESA-Toolkit/mesa-report-generator/templates/"
+
+    #rv_num = rv_num.lower()
+    # Create copy of scan data for parsing
+    home = os.getcwd()
+    os.chdir(home)
+    os.system("mkdir -p data")
+    os.system(f"cp -r {rv_num}_Scans/ data/{rv_num}-all_checks")
+    root_directory = "data/"
+
+    # List of file extensions to remove
+    extensions_to_remove = [".failed", ".complete", ".intermediate-complete", ".started"]
+
+    # Function to remove files with specific extensions
+    def remove_files_with_extensions(dir_path, extensions):
+        for dirpath, dirnames, filenames in os.walk(dir_path):
+            for filename in filenames:
+                file_path = os.path.join(dirpath, filename)
+                for extension in extensions:
+                    if filename.endswith(extension):
+                        print(f"Removing: {file_path}")
+                        os.remove(file_path)
+
+    # Call the function to remove files with specified extensions
+    remove_files_with_extensions(root_directory, extensions_to_remove)
+
+    # Define locations for input files
+    scope_file = f"data/{rv_num}-all_checks/scope.txt"
+    exclusions_file = f"data/{rv_num}-all_checks/exclusions.txt"
+    discovery_file = f"data/{rv_num}-all_checks/Port_Scans/DISCOVERY/Parsed-Results/Host-Lists/Alive-Hosts-Open-Ports.txt"
+    tcp_ports_file = f"data/{rv_num}-all_checks/Port_Scans/FULL/Parsed-Results/Port-Lists/TCP-Ports-List.txt"
+    aquatone_urls_file = f"data/{rv_num}-all_checks/Web_App_Enumeration/aquatone_urls.txt"
+
+    # Define a function to count lines in a file and remove leading whitespace
+    def count_lines(filename):
+        with open(filename, 'r') as file:
+            return len([line.strip() for line in file.readlines()])
+
+    # Execute nmap command and count scanned hosts
+    command = f"nmap -Pn -n -sL -iL {scope_file} --excludefile {exclusions_file} | cut -d ' ' -f 5 | grep -v 'nmap\\|address' | wc -l | sed 's/^[[:space:]]*//g'"
+    output = subprocess.check_output(command, shell=True, text=True)
+    scanned_hosts = int(output.strip())
+    os.system(f"nmap -Pn -n -sL -iL {scope_file} --excludefile {exclusions_file} | cut -d ' ' -f 5 | grep -v 'nmap\\|address' > data/{rv_num}-all_checks/consolidated_scope.txt")
+
+    # Count live hosts
+    live_hosts = count_lines(discovery_file)
+
+    # Count unique ports
+    unique = count_lines(tcp_ports_file)
+
+    # Count web servers
+    web_servers = count_lines(aquatone_urls_file)
+
+    # Count cleartext hosts
+    cleartext_hosts = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Encryption_Check/Cleartext_Protocols/*.txt"))
+
+    # Count default logins
+    default_logins = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/Default_Logins/*affected_hosts.txt"))
+
+    # Count unique vulnerabilities
+    unique_vulns = len(set(line.split('-')[1] for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*affected_hosts.txt") for line in open(file)))
+
+    # Count critical vulnerabilities
+    critical_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_critical_affected_hosts.txt"))
+
+    # Count high vulnerabilities
+    high_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_high_affected_hosts.txt"))
+
+    # Count medium vulnerabilities
+    medium_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_medium_affected_hosts.txt"))
+
+    # Count low vulnerabilities
+    low_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_low_affected_hosts.txt"))
+
+    # Count informational vulnerabilities
+    info_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_informational_affected_hosts.txt"))
+
+    # Count SMB Signing Disabled
+    smb_sign_disable = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/SMB_Signing/*_SMB_Signing_Disabled.txt"))
+
+    # Create a dictionary to store the variables
+    variables = {
+        "project_name": rv_num,
+        "customer_name": customer_name,
+        "customer_initials": customer_initials,
+        "ip_addr_scanned": scanned_hosts,
+        "live_hosts": live_hosts,
+        "unique_ports": unique,
+        "web_servers": web_servers,
+        "cleartext_hosts": cleartext_hosts,
+        "default_logins": default_logins,
+        "unique_vulns": unique_vulns,
+        "critical_vulns": critical_vulns,
+        "high_vulns": high_vulns,
+        "medium_vulns": medium_vulns,
+        "low_vulns": low_vulns,
+        "info_vulns": info_vulns,
+        "smb_sign_disabled": smb_sign_disable
+    }
+
+    # Write the variables to a JSON file
+    with open('variables.json', 'w') as json_file:
+        json.dump(variables, json_file, indent=4)
+
+    # Read the template file
+    try:
+        with open(template_file, 'r') as template_file:
+            template_content = template_file.read()
+    except FileNotFoundError:
+        print(f"Error: Template file '{template_file}' not found.")
+        sys.exit(1)
+
+    try:
+        with open('variables.json', 'r') as json_file:
+            data = json.load(json_file)
+    except FileNotFoundError:
+        print("Error: Data file 'variables.json' not found.")
+        sys.exit(1)
+
+    # Create the proper directories for output files
+    os.system(f'mkdir -p output/{rv_num}/data output/{rv_num}/json output/{rv_num}/customer_deliverable')
+
+    # Create deliverable zip file to provide to the customer
+    os.system(f'cp -r data/{rv_num}-all_checks output/{rv_num}/data')
+    os.system(f'cp -r {template_directory}/digest_images output/{rv_num}/data')
+
+    default_dir = f'output/{rv_num}/data/{rv_num}-all_checks'
+
+    # See below functions for how this is done
+    generate_json_file(f'output/{rv_num}/json/{customer_initials}-Customer-Json.json', default_dir, rv_num)
+
+    # Zip everything together and move it into the proper directory to eventually be downloaded by the user
+    os.system(f'zip -rv {customer_initials}-Customer-Json.zip output/{rv_num}/data "output/{rv_num}/json/{customer_initials}-Customer-Json.json"')
+    os.system(f'mv {customer_initials}-Customer-Json.zip output/{rv_num}/customer_deliverable')
+
+    # Remove variables.json after report generation
+    os.remove("variables.json")
+
+    # Remove data directory
+    os.system("rm -rf data")
+
+# A helper function to see if a string is located in a file
+def located_in_file(file_to_read, string_to_find):
+    with open(file_to_read) as f:
+        if string_to_find in f.read():
+            f.close()
+            return "True" # If found, return True (ends the function)
+    f.close()
+    return "False" # If not found by the end, the input string is not located in the file. Return False
+
+# Returns a count of live hosts from the port scan
+def get_live_hosts(default_dir):
+    # Open the file that lists live hosts
+    try:
+        with open(rf'{default_dir}/Port_Scans/FULL/Parsed-Results/Host-Lists/Alive-Hosts-ICMP.txt', 'r') as file:
+            lines = file.read().splitlines()
+            count = 0
+            for element in lines: # Loop through and increment the count of live hosts
+                count = count + 1
+        file.close()
+        return count # Return the final count
+    except FileNotFoundError: # If there is no live hosts file, we can safely assume the count is 0
+        return 0
+
+# Returns a list of dictionaries for the ports and their associated counts, grouped by third party service
+def third_party_json_generate(default_dir):
+    json_return_data = [] # A variable that will store the data this function will ultimately return
+    found_port = False # Whether the port was already included in the current output. Is false until found
+
+    # Looping through each third party service file that was scanned for
+    for filename in os.listdir(f'{default_dir}/Port_Scans/FULL/Parsed-Results/Third-Party'):
+        with open(rf'{default_dir}/Port_Scans/FULL/Parsed-Results/Third-Party/{filename}', 'r') as file:
+            ports_list = [] # Resetting the list of ports for the new third party service
+            lines = file.read().splitlines()
+
+            for finding in lines: # Loop through the lines in the current third party service file
+                match = re.match(r'(\w+)://([\d\.]+):(\d+)', finding) # Split the url data into its 3 components
+                for entry in ports_list: # For every port / http(s) combination documented so far
+                    if entry['port'] == match.group(3): # If the port already exists, check if this is http or https
+                        if match.group(1) == 'http': # If it is http, increment the http count
+                            if 'http_count' in entry: # Increment if the http count exists
+                                entry['http_count'] = entry['http_count'] + 1
+                            else: # Create the http count if it doesn't exist
+                                entry['http_count'] = 1
+                        else: # If it is https, increment the https count
+                            if 'https_count' in entry: # Increment if the https count exists
+                                entry['https_count'] = entry['https_count'] + 1
+                            else: # Create the https count if it doesn't exist
+                                entry['https_count'] = 1
+                        found_port = True
+
+                if found_port == False: # If the port did not already exist, add it with the appropriate count
+                    if match.group(1) == 'http': # If the port has http
+                        tmp_dict = { 'port':match.group(3), 'http_count':1 }
+                    else: # Otherwise, if the port has https
+                        tmp_dict = { 'port':match.group(3), 'https_count':1 }
+                found_port = False # Reset the value
+                ports_list.append(tmp_dict.copy()) # Append the temporary value to the list of ports
+                tmp_dict.clear() # Clear for the next iteration
+
+            # Ordering the port results so they appear in descending order in the json file
+            sorted_ports_list = sorted(ports_list, key=lambda x: int(x.get('port', 99999999)))
+            filename_trimmed = filename.removesuffix('.txt').lower() # Trim the file type and make it lowercase
+            data_tmp = { filename_trimmed:sorted_ports_list.copy() } # Add the current third party service data to a tmp var
+            ports_list.clear() # Clear the list of ports for the next iteration (next third party service)
+            json_return_data.append(data_tmp.copy()) # Append the collected data to the json to return
+        file.close()
+
+    # Sorting the json return data before returning
+    json_return_data_sorted = sorted(json_return_data, key=lambda x: list(x.keys())[0])
+
+    return json_return_data_sorted # Returning the third party data
+
+
+# Returns a list of dictionaries for the ports and their associated counts, grouped by cleartext protocol
+def port_data_json_generate(default_dir):
+    json_return_data = [] # A variable that will store the data this function will ultimately return
+    found_port = False # Whether the port was already included in the current output. Is false until found
+
+    # Looping through each cleartext protocol file that was scanned for
+    for filename in os.listdir(f'{default_dir}/Port_Scans/FULL/Parsed-Results/Port-Matrix'):
+        with open(rf'{default_dir}/Port_Scans/FULL/Parsed-Results/Port-Matrix/{filename}', 'r') as file:
+            ports_list = [] # Resetting the list of ports for the new cleartext protocol
+            lines = file.read().splitlines()
+
+            for finding in lines: # Loop through the lines in the current cleartext protocol file
+                data = finding.split(',') # Split the file data by comma
+                for entry in ports_list: # For every port / count combination documented so far
+                    if entry['port'] == data[2]: # If the port already exists, increment its count
+                        entry['count'] = entry['count'] + 1
+                        found_port = True
+                if found_port == False: # If the port didn't already exist, add it with a count of 1
+                    tmp_dict = { 'port':data[2], 'count':1 }
+                    ports_list.append(tmp_dict.copy())
+                    tmp_dict.clear()
+                found_port = False # Reset this value for the next iteration
+
+            # Ordering the port results so they appear in descending order in the output json file
+            sorted_ports_list = sorted(ports_list, key=lambda x: int(x['port']))
+            # Trimming the file name to only include the current cleartext protocol
+            filename_trimmed = filename.removesuffix('-Services-Matrix.csv').lower()
+            data_tmp = { # Saving the data for the current cleartext protocol in a tmp dictionary
+                filename_trimmed:sorted_ports_list.copy()
+            }
+
+            ports_list.clear() # Clear the port list for the next iteration
+            json_return_data.append(data_tmp) # Add the current data to the list of return data
+        file.close()
+
+    # Sorting the json return data before returning
+    json_return_data_sorted = sorted(json_return_data, key=lambda x: list(x.keys())[0])
+
+    return json_return_data_sorted # Returning all of the cleartext protocol data
+
+
+# A function that collects and returns the host data from a mesa port scan
+def host_data_json_generate(default_dir):
+    json_return_data = {} # Creating the dictionary that will be returned later
+    current_count = 0 # Keeps track of the current value being counted
+
+    # Open the file containing the hosts with open ports
+    try:
+        with open(rf'{default_dir}/Port_Scans/FULL/Parsed-Results/Host-Lists/Alive-Hosts-Open-Ports.txt', 'r') as file:
+            lines = file.read().splitlines() # Gets the lines from the file
+            for finding in lines: # Loops through the lines and keeps track of the count
+                current_count = current_count + 1
+            json_return_data['hosts_with_open_ports'] = current_count # Add the current count to the return data
+            current_count = 0
+        file.close()
+    except FileNotFoundError: # If the file doesn't exist, 0 is the default count
+        json_return_data['hosts_with_open_ports'] = 0
+
+    # Loop through the filenames in the directory of host properties
+    for filename in os.listdir(f'{default_dir}/Port_Scans/FULL/Parsed-Results/Host-Type'):
+        # Read all of the files
+        with open(rf'{default_dir}/Port_Scans/FULL/Parsed-Results/Host-Type/{filename}', 'r') as file:
+            lines = file.read().splitlines()
+            for finding in lines: # Loop through the lines and increment the current count
+                current_count = current_count + 1
+            key_name = filename.removesuffix('.txt').lower() + '_count' # Get the name of the key based off of the file name
+            json_return_data[key_name] = current_count # Add the current count to the return data
+            current_count = 0 # Reset the current count for the next loop
+        file.close()
+
+    return json_return_data # Return the collected / formatted data
+
+def consolidated_scope_get_count(default_dir):
+    current_count = 0
+    try:
+        with open(rf'{default_dir}/consolidated_scope.txt', 'r') as file:
+            lines = file.read().splitlines()
+            for address in lines:
+                current_count = current_count + 1
+            return current_count
+    except FileNotFoundError:
+        return current_count
+
+
+# The main function of this script that calls all other generation functions to create the json output
+def generate_json_file(filename, default_dir, rv_num):
+    try:
+        # Generating the json output data using the above functions
+        output_json = {
+            "type":"Micro Evaluation Security Assessment (MESA)",
+            "id":rv_num,
+            "fiscal_year":"2024",
+            "sector":"",
+            "critical_infrastructure_sector":"",
+            "critical_infrastructure_subsector":"",
+            "testing_start_date":"",
+            "testing_completion_date":"",
+            "state":"",
+            "consolidated_scope_count":consolidated_scope_get_count(default_dir),
+            "live_hosts":get_live_hosts(default_dir),
+            "host_data":host_data_json_generate(default_dir),
+            "protocols":port_data_json_generate(default_dir),
+            "web_applications":third_party_json_generate(default_dir)
+        }
+        formatted_json = json.dumps(output_json, indent = 2) # Format the generated json data to json format
+        os.system(f'touch {filename}') # Making sure the output file exists
+        f = open(filename, "w") # Open the json output file for writing
+        f.write(formatted_json) # Write the formatted json data to the output file
+        f.close() # Close the output file
+    except:
+        output_json = {
+            "error":"There was an error in the json output generation. This is likely the result of not all scans being completed."
+        }

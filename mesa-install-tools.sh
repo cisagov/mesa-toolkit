@@ -42,6 +42,7 @@ apt install git -y
 apt install curl -y
 apt install zip -y
 apt install gcc make libpcap-dev -y
+apt install python3-pdfkit # Added for html > pdf functionality
 
 # Install the latest version of GO
 # Select the latest package for your architecture from https://golang.org/dl/ and download it.
