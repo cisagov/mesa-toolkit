@@ -42,7 +42,6 @@ apt install git -y
 apt install curl -y
 apt install zip -y
 apt install gcc make libpcap-dev -y
-apt install python3-pdfkit # Added for html > pdf functionality
 
 # Install the latest version of GO
 # Select the latest package for your architecture from https://golang.org/dl/ and download it.
@@ -94,6 +93,7 @@ make
 make install
 cd $start
 pip install .
+pip install pdfkit
 
 echo "########################################################################################"
 echo "# All dependencies have been installed in a virtual enviroment located in /opt.        #"
@@ -160,6 +160,7 @@ python3 -m venv MESA-venv
 source MESA-venv/bin/activate
 cd $start
 pip install .
+pip install pdfkit
 
 echo "########################################################################################"
 echo "# All dependencies have been installed in a virtual enviroment located in /opt.        #"
