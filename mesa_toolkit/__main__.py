@@ -26,6 +26,7 @@ class Operations(str, Enum):
     vuln_scans = "vuln_scans"
     all_checks = "all_checks"
     report_generator = "report_generator"
+    json_generator = "json_generator"
 
 
 @app.command(no_args_is_help=True, help='MESA-Toolkit help!')
@@ -85,6 +86,9 @@ def main(
 
     if operation == Operations.report_generator:
         report_generator(project_name, customer_name, customer_initials)
+
+    if operation == Operations.json_generator:
+        json_generator(project_name, customer_name, customer_initials)
 
 if __name__ == '__main__':
     app(prog_name='MESA-Toolkit')

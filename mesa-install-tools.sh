@@ -93,6 +93,7 @@ make
 make install
 cd $start
 pip install .
+pip install pdfkit
 
 echo "########################################################################################"
 echo "# All dependencies have been installed in a virtual enviroment located in /opt.        #"
@@ -159,6 +160,7 @@ python3 -m venv MESA-venv
 source MESA-venv/bin/activate
 cd $start
 pip install .
+pip install pdfkit
 
 echo "########################################################################################"
 echo "# All dependencies have been installed in a virtual enviroment located in /opt.        #"
