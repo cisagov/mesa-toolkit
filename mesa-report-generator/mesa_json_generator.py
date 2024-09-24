@@ -151,8 +151,8 @@ with open(output_file, 'w') as output_file:
 # Create deliverable zip file to provide to the customer
 os.system(f'cp -r data/{project_name}-all_checks output/{project_name}/data')
 os.system(f'cp -r templates/digest_images output/{project_name}/data')
-os.system(f'zip -rv {customer_initials}-Customer-Report.zip output/{project_name}/data "output/{project_name}/report/{customer_name}-Report.html"')
-os.system(f'mv {customer_initials}-Customer-Report.zip output/{project_name}/customer_deliverable')
+os.system(f'zip -rv {customer_initials}-Customer-Json.zip output/{project_name}/data "output/{project_name}/report/{customer_name}-Report.html"')
+os.system(f'mv {customer_initials}-Customer-Json.zip output/{project_name}/customer_deliverable')
 
 # Remove variables.json after report generation
 os.remove("variables.json")
