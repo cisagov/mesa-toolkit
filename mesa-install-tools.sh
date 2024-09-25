@@ -42,6 +42,7 @@ apt install git -y
 apt install curl -y
 apt install zip -y
 apt install gcc make libpcap-dev -y
+apt install python3-pdfkit -y
 
 # Install the latest version of GO
 # Select the latest package for your architecture from https://golang.org/dl/ and download it.
@@ -140,6 +141,7 @@ apt install python3.11-venv -y
 apt install chromium -y
 apt install jq -y
 apt install golang-go -y
+apt install python3-pdfkit -y
 
 # Install nuclei and update templates
 go install -v github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
