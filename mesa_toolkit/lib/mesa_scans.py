@@ -541,7 +541,7 @@ def report_generator(rv_num, customer_name, customer_initials):
     
 
     # Create a pdf based off of the modified html file
-    os.system(f'wkhtmltopdf --disable-internal-links --keep-relative-links --enable-local-file-access --log-level error tmp.html "{current_dir}/output/{rv_num}/report/{customer_name}-Report.pdf"')
+    os.system(f'wkhtmltopdf --enable-local-file-access --disable-javascript --log-level error tmp.html "{current_dir}/output/{rv_num}/report/{customer_name}-Report.pdf"')
     # Modify the paths in the pdf file to be relative and not specific to root
     os.system(f"sed -i 's|file:///root/.mesa/|../|g' '{current_dir}/output/{rv_num}/report/{customer_name}-Report.pdf'")
     # Remove the temporary html file now that the pdf is fully created
@@ -564,7 +564,6 @@ def json_generator(rv_num, customer_name, customer_initials):
     template_file = "/opt/MESA-Toolkit/mesa-report-generator/templates/template.html"
     template_directory = "/opt/MESA-Toolkit/mesa-report-generator/templates/"
 
-    #rv_num = rv_num.lower()
     # Create copy of scan data for parsing
     home = os.getcwd()
     os.chdir(home)
@@ -575,7 +574,6 @@ def json_generator(rv_num, customer_name, customer_initials):
     # List of file extensions to remove
     extensions_to_remove = [".failed", ".complete", ".intermediate-complete", ".started"]
 
-    # Function to remove files with specific extensions
     def remove_files_with_extensions(dir_path, extensions):
         for dirpath, dirnames, filenames in os.walk(dir_path):
             for filename in filenames:
@@ -585,7 +583,6 @@ def json_generator(rv_num, customer_name, customer_initials):
                         print(f"Removing: {file_path}")
                         os.remove(file_path)
 
-    # Call the function to remove files with specified extensions
     remove_files_with_extensions(root_directory, extensions_to_remove)
 
     # Define locations for input files
@@ -595,52 +592,41 @@ def json_generator(rv_num, customer_name, customer_initials):
     tcp_ports_file = f"data/{rv_num}-all_checks/Port_Scans/FULL/Parsed-Results/Port-Lists/TCP-Ports-List.txt"
     aquatone_urls_file = f"data/{rv_num}-all_checks/Web_App_Enumeration/aquatone_urls.txt"
 
-    # Define a function to count lines in a file and remove leading whitespace
-    def count_lines(filename):
-        with open(filename, 'r') as file:
-            return len([line.strip() for line in file.readlines()])
+    # Define a safe function to count lines in a file
+    def safe_count_lines(filename):
+        try:
+            with open(filename, 'r') as file:
+                return len([line.strip() for line in file.readlines()])
+        except FileNotFoundError:
+            print(f"Warning: File '{filename}' not found. Returning 0.")
+            return 0
 
     # Execute nmap command and count scanned hosts
-    command = f"nmap -Pn -n -sL -iL {scope_file} --excludefile {exclusions_file} | cut -d ' ' -f 5 | grep -v 'nmap\\|address' | wc -l | sed 's/^[[:space:]]*//g'"
-    output = subprocess.check_output(command, shell=True, text=True)
-    scanned_hosts = int(output.strip())
-    os.system(f"nmap -Pn -n -sL -iL {scope_file} --excludefile {exclusions_file} | cut -d ' ' -f 5 | grep -v 'nmap\\|address' > data/{rv_num}-all_checks/consolidated_scope.txt")
+    try:
+        command = f"nmap -Pn -n -sL -iL {scope_file} --excludefile {exclusions_file} | cut -d ' ' -f 5 | grep -v 'nmap\\|address' | wc -l | sed 's/^[[:space:]]*//g'"
+        output = subprocess.check_output(command, shell=True, text=True)
+        scanned_hosts = int(output.strip())
+        os.system(f"nmap -Pn -n -sL -iL {scope_file} --excludefile {exclusions_file} | cut -d ' ' -f 5 | grep -v 'nmap\\|address' > data/{rv_num}-all_checks/consolidated_scope.txt")
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing nmap command: {e}")
+        scanned_hosts = 0
 
-    # Count live hosts
-    live_hosts = count_lines(discovery_file)
+    # Safely count file-based metrics
+    live_hosts = safe_count_lines(discovery_file)
+    unique = safe_count_lines(tcp_ports_file)
+    web_servers = safe_count_lines(aquatone_urls_file)
 
-    # Count unique ports
-    unique = count_lines(tcp_ports_file)
+    # Safely sum values for multiple files
+    cleartext_hosts = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Encryption_Check/Cleartext_Protocols/*.txt"))
+    default_logins = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/Default_Logins/*affected_hosts.txt"))
+    unique_vulns = len(set(line.split('-')[1] for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*affected_hosts.txt") for line in open(file, 'r', errors='ignore')))
 
-    # Count web servers
-    web_servers = count_lines(aquatone_urls_file)
-
-    # Count cleartext hosts
-    cleartext_hosts = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Encryption_Check/Cleartext_Protocols/*.txt"))
-
-    # Count default logins
-    default_logins = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/Default_Logins/*affected_hosts.txt"))
-
-    # Count unique vulnerabilities
-    unique_vulns = len(set(line.split('-')[1] for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*affected_hosts.txt") for line in open(file)))
-
-    # Count critical vulnerabilities
-    critical_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_critical_affected_hosts.txt"))
-
-    # Count high vulnerabilities
-    high_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_high_affected_hosts.txt"))
-
-    # Count medium vulnerabilities
-    medium_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_medium_affected_hosts.txt"))
-
-    # Count low vulnerabilities
-    low_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_low_affected_hosts.txt"))
-
-    # Count informational vulnerabilities
-    info_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_informational_affected_hosts.txt"))
-
-    # Count SMB Signing Disabled
-    smb_sign_disable = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/SMB_Signing/*_SMB_Signing_Disabled.txt"))
+    critical_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_critical_affected_hosts.txt"))
+    high_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_high_affected_hosts.txt"))
+    medium_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_medium_affected_hosts.txt"))
+    low_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_low_affected_hosts.txt"))
+    info_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_informational_affected_hosts.txt"))
+    smb_sign_disable = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/SMB_Signing/*_SMB_Signing_Disabled.txt"))
 
     # Create a dictionary to store the variables
     variables = {
@@ -690,7 +676,6 @@ def json_generator(rv_num, customer_name, customer_initials):
 
     default_dir = f'output/{rv_num}/data/{rv_num}-all_checks'
 
-    # See below functions for how this is done
     generate_json_file(f'output/{rv_num}/json/{customer_initials}-Customer-Json.json', default_dir, rv_num)
 
     # Zip everything together and move it into the proper directory to eventually be downloaded by the user
@@ -865,27 +850,55 @@ def generate_json_file(filename, default_dir, rv_num):
     try:
         # Generating the json output data using the above functions
         output_json = {
-            "type":"Micro Evaluation Security Assessment (MESA)",
-            "id":rv_num,
-            "fiscal_year":"2024",
-            "sector":"",
-            "critical_infrastructure_sector":"",
-            "critical_infrastructure_subsector":"",
-            "testing_start_date":"",
-            "testing_completion_date":"",
-            "state":"",
-            "consolidated_scope_count":consolidated_scope_get_count(default_dir),
-            "live_hosts":get_live_hosts(default_dir),
-            "host_data":host_data_json_generate(default_dir),
-            "protocols":port_data_json_generate(default_dir),
-            "web_applications":third_party_json_generate(default_dir)
+            "type": "Micro Evaluation Security Assessment (MESA)",
+            "id": rv_num,
+            "fiscal_year": "2024",
+            "sector": "",
+            "critical_infrastructure_sector": "",
+            "critical_infrastructure_subsector": "",
+            "testing_start_date": "",
+            "testing_completion_date": "",
+            "state": "",
         }
-        formatted_json = json.dumps(output_json, indent = 2) # Format the generated json data to json format
-        os.system(f'touch {filename}') # Making sure the output file exists
-        f = open(filename, "w") # Open the json output file for writing
-        f.write(formatted_json) # Write the formatted json data to the output file
-        f.close() # Close the output file
-    except:
-        output_json = {
-            "error":"There was an error in the json output generation. This is likely the result of not all scans being completed."
-        }
+
+        # Safely calling helper functions and assigning default values on failure
+        try:
+            output_json["consolidated_scope_count"] = consolidated_scope_get_count(default_dir)
+        except Exception as e:
+            print(f"Warning: Failed to get consolidated scope count. Error: {e}")
+            output_json["consolidated_scope_count"] = 0
+
+        try:
+            output_json["live_hosts"] = get_live_hosts(default_dir)
+        except Exception as e:
+            print(f"Warning: Failed to get live hosts count. Error: {e}")
+            output_json["live_hosts"] = 0
+
+        try:
+            output_json["host_data"] = host_data_json_generate(default_dir)
+        except Exception as e:
+            print(f"Warning: Failed to generate host data. Error: {e}")
+            output_json["host_data"] = []
+
+        try:
+            output_json["protocols"] = port_data_json_generate(default_dir)
+        except Exception as e:
+            print(f"Warning: Failed to generate protocol data. Error: {e}")
+            output_json["protocols"] = []
+
+        try:
+            output_json["web_applications"] = third_party_json_generate(default_dir)
+        except Exception as e:
+            print(f"Warning: Failed to generate web applications data. Error: {e}")
+            output_json["web_applications"] = []
+
+        # Format the generated JSON data to JSON format
+        formatted_json = json.dumps(output_json, indent=2)
+
+        # Ensure the output file exists and write the JSON data
+        os.system(f'touch {filename}')
+        with open(filename, "w") as f:
+            f.write(formatted_json)
+
+    except Exception as e:
+        print(f"Error: Failed to generate JSON file. Error: {e}")
