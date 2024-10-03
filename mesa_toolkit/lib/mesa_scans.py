@@ -32,6 +32,8 @@ DEFAULT_LOGINS_FOLDERS = '_Scans/Insecure_Default_Configuration/Default_Logins/'
 DOMAINENUM_FOLDERS = '_Scans/Domain_Enumeration/'
 SMB_SIGNING_FOLDERS = '_Scans/Insecure_Default_Configuration/SMB_Signing/'
 PASS_POLICY_FOLDERS = '_Scans/Password_Policy/'
+EXTENSIONS_TO_REMOVE = [".failed", ".complete", ".intermediate-complete", ".started"]
+ROOT_DIRECTORY = 'data/'
 
 def cleanup_empty_files(path="."):
     for (dirpath, folder_names, files) in os.walk(path):
@@ -42,6 +44,42 @@ def cleanup_empty_files(path="."):
                     if os.path.getsize(file_location) == 0: #Checking if the file is empty or not
                         os.remove(file_location)  #If the file is empty then it is deleted using remove method
 
+# Define a safe function to count lines in a file
+def safe_count_lines(filename):
+    try:
+        with open(filename, 'r') as file:
+            return len([line.strip() for line in file.readlines()])
+    except FileNotFoundError:
+        print(f"Warning: File '{filename}' not found. Returning 0.")
+        return 0
+
+def capture_variables(rv_num,discovery_file,tcp_ports_file,aquatone_urls_file):
+    # Safely count file-based metrics
+    live_hosts = safe_count_lines(discovery_file)
+    unique = safe_count_lines(tcp_ports_file)
+    web_servers = safe_count_lines(aquatone_urls_file)
+
+    # Safely sum values for multiple files
+    cleartext_hosts = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Encryption_Check/Cleartext_Protocols/*.txt"))
+    default_logins = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/Default_Logins/*affected_hosts.txt"))
+    unique_vulns = len(set(line.split('-')[1] for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*affected_hosts.txt") for line in open(file, 'r', errors='ignore')))
+
+    critical_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_critical_affected_hosts.txt"))
+    high_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_high_affected_hosts.txt"))
+    medium_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_medium_affected_hosts.txt"))
+    low_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_low_affected_hosts.txt"))
+    info_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_informational_affected_hosts.txt"))
+    smb_sign_disable = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/SMB_Signing/*_SMB_Signing_Disabled.txt"))
+
+# Function to remove files with specific extensions
+def remove_files_with_extensions(dir_path, extensions):
+    for dirpath, dirnames, filenames in os.walk(dir_path):
+        for filename in filenames:
+            file_path = os.path.join(dirpath, filename)
+            for extension in extensions:
+                if filename.endswith(extension):
+                    print(f"Removing: {file_path}")
+                    os.remove(file_path)
 
 def mark_folder_complete(path=".", completion_status=STATUS_CODE_COMPLETE_NOT_RAN):
     os.makedirs(path, exist_ok=True)
@@ -391,23 +429,9 @@ def report_generator(rv_num, customer_name, customer_initials):
     os.chdir(home)
     os.system("mkdir -p data")
     os.system(f"cp -r {rv_num}_Scans/ data/{rv_num}-all_checks")
-    root_directory = "data/"
-
-    # List of file extensions to remove
-    extensions_to_remove = [".failed", ".complete", ".intermediate-complete", ".started"]
-
-    # Function to remove files with specific extensions
-    def remove_files_with_extensions(dir_path, extensions):
-        for dirpath, dirnames, filenames in os.walk(dir_path):
-            for filename in filenames:
-                file_path = os.path.join(dirpath, filename)
-                for extension in extensions:
-                    if filename.endswith(extension):
-                        print(f"Removing: {file_path}")
-                        os.remove(file_path)
 
     # Call the function to remove files with specified extensions
-    remove_files_with_extensions(root_directory, extensions_to_remove)
+    remove_files_with_extensions(ROOT_DIRECTORY, EXTENSIONS_TO_REMOVE)
 
     # Define locations for input files
     scope_file = f"data/{rv_num}-all_checks/scope.txt"
@@ -416,20 +440,13 @@ def report_generator(rv_num, customer_name, customer_initials):
     tcp_ports_file = f"data/{rv_num}-all_checks/Port_Scans/FULL/Parsed-Results/Port-Lists/TCP-Ports-List.txt"
     aquatone_urls_file = f"data/{rv_num}-all_checks/Web_App_Enumeration/aquatone_urls.txt"
 
-    # Define a function to count lines in a file and remove leading whitespace
-    def count_lines(filename):
-        if not os.path.exists(filename):
-            return 0
-        with open(filename, 'r') as file:
-            return len([line.strip() for line in file.readlines()])
-
     # Define a function to count unique vulnerabilities
     def count_unique_vulns():
         unique_vulns_set = set()
         for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*affected_hosts.txt"):
             with open(file) as f:
                 for line in f:
-                    vuln_id = line.split('_')[1]
+                    vuln_id = line.split(' ')[1]
                     unique_vulns_set.add(vuln_id)
         return len(unique_vulns_set)
 
@@ -443,40 +460,40 @@ def report_generator(rv_num, customer_name, customer_initials):
         scanned_hosts = 0
 
     # Count live hosts
-    live_hosts = count_lines(discovery_file)
+    live_hosts = safe_count_lines(discovery_file)
 
     # Count unique ports
-    unique = count_lines(tcp_ports_file)
+    unique = safe_count_lines(tcp_ports_file)
 
     # Count web servers
-    web_servers = count_lines(aquatone_urls_file)
+    web_servers = safe_count_lines(aquatone_urls_file)
 
     # Count cleartext hosts
-    cleartext_hosts = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Encryption_Check/Cleartext_Protocols/*.txt"))
+    cleartext_hosts = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Encryption_Check/Cleartext_Protocols/*.txt"))
 
     # Count default logins
-    default_logins = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/Default_Logins/*affected_hosts.txt"))
+    default_logins = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/Default_Logins/*affected_hosts.txt"))
 
     # Count unique vulnerabilities
     unique_vulns = count_unique_vulns()
 
     # Count critical vulnerabilities
-    critical_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_critical_affected_hosts.txt"))
+    critical_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_critical_affected_hosts.txt"))
 
     # Count high vulnerabilities
-    high_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_high_affected_hosts.txt"))
+    high_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_high_affected_hosts.txt"))
 
     # Count medium vulnerabilities
-    medium_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_medium_affected_hosts.txt"))
+    medium_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_medium_affected_hosts.txt"))
 
     # Count low vulnerabilities
-    low_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_low_affected_hosts.txt"))
+    low_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_low_affected_hosts.txt"))
 
     # Count informational vulnerabilities
-    info_vulns = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_informational_affected_hosts.txt"))
+    info_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_informational_affected_hosts.txt"))
 
     # Count SMB Signing Disabled
-    smb_sign_disable = sum(count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/SMB_Signing/*_SMB_Signing_Disabled.txt"))
+    smb_sign_disable = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/SMB_Signing/*_SMB_Signing_Disabled.txt"))
 
     # Create a dictionary to store the variables
     variables = {
@@ -569,21 +586,8 @@ def json_generator(rv_num, customer_name, customer_initials):
     os.chdir(home)
     os.system("mkdir -p data")
     os.system(f"cp -r {rv_num}_Scans/ data/{rv_num}-all_checks")
-    root_directory = "data/"
 
-    # List of file extensions to remove
-    extensions_to_remove = [".failed", ".complete", ".intermediate-complete", ".started"]
-
-    def remove_files_with_extensions(dir_path, extensions):
-        for dirpath, dirnames, filenames in os.walk(dir_path):
-            for filename in filenames:
-                file_path = os.path.join(dirpath, filename)
-                for extension in extensions:
-                    if filename.endswith(extension):
-                        print(f"Removing: {file_path}")
-                        os.remove(file_path)
-
-    remove_files_with_extensions(root_directory, extensions_to_remove)
+    remove_files_with_extensions(ROOT_DIRECTORY, EXTENSIONS_TO_REMOVE)
 
     # Define locations for input files
     scope_file = f"data/{rv_num}-all_checks/scope.txt"
@@ -591,15 +595,6 @@ def json_generator(rv_num, customer_name, customer_initials):
     discovery_file = f"data/{rv_num}-all_checks/Port_Scans/DISCOVERY/Parsed-Results/Host-Lists/Alive-Hosts-Open-Ports.txt"
     tcp_ports_file = f"data/{rv_num}-all_checks/Port_Scans/FULL/Parsed-Results/Port-Lists/TCP-Ports-List.txt"
     aquatone_urls_file = f"data/{rv_num}-all_checks/Web_App_Enumeration/aquatone_urls.txt"
-
-    # Define a safe function to count lines in a file
-    def safe_count_lines(filename):
-        try:
-            with open(filename, 'r') as file:
-                return len([line.strip() for line in file.readlines()])
-        except FileNotFoundError:
-            print(f"Warning: File '{filename}' not found. Returning 0.")
-            return 0
 
     # Execute nmap command and count scanned hosts
     try:
@@ -610,7 +605,7 @@ def json_generator(rv_num, customer_name, customer_initials):
     except subprocess.CalledProcessError as e:
         print(f"Error executing nmap command: {e}")
         scanned_hosts = 0
-
+    
     # Safely count file-based metrics
     live_hosts = safe_count_lines(discovery_file)
     unique = safe_count_lines(tcp_ports_file)
@@ -676,11 +671,11 @@ def json_generator(rv_num, customer_name, customer_initials):
 
     default_dir = f'output/{rv_num}/data/{rv_num}-all_checks'
 
-    generate_json_file(f'output/{rv_num}/json/{customer_initials}-Customer-Json.json', default_dir, rv_num)
+    generate_json_file(f'output/{rv_num}/json/{rv_num}-mesa-data.json', default_dir, rv_num)
 
     # Zip everything together and move it into the proper directory to eventually be downloaded by the user
-    os.system(f'zip -rv {customer_initials}-Customer-Json.zip output/{rv_num}/data "output/{rv_num}/json/{customer_initials}-Customer-Json.json"')
-    os.system(f'mv {customer_initials}-Customer-Json.zip output/{rv_num}/customer_deliverable')
+    os.system(f'zip -rv {rv_num}-mesa-json-data.zip output/{rv_num}/data "output/{rv_num}/json/{rv_num}-mesa-data.json"')
+    os.system(f'mv {rv_num}-mesa-json-data.zip output/{rv_num}/customer_deliverable')
 
     # Remove variables.json after report generation
     os.remove("variables.json")
@@ -743,9 +738,9 @@ def third_party_json_generate(default_dir):
                         tmp_dict = { 'port':match.group(3), 'http_count':1 }
                     else: # Otherwise, if the port has https
                         tmp_dict = { 'port':match.group(3), 'https_count':1 }
+                    ports_list.append(tmp_dict.copy()) # Append the temporary value to the list of ports
+                    tmp_dict.clear() # Clear for the next iteration
                 found_port = False # Reset the value
-                ports_list.append(tmp_dict.copy()) # Append the temporary value to the list of ports
-                tmp_dict.clear() # Clear for the next iteration
 
             # Ordering the port results so they appear in descending order in the json file
             sorted_ports_list = sorted(ports_list, key=lambda x: int(x.get('port', 99999999)))
@@ -760,6 +755,88 @@ def third_party_json_generate(default_dir):
 
     return json_return_data_sorted # Returning the third party data
 
+    # Add the vulnerability_results to the main dictionary
+    data["vulnerability_results"] = vulnerability_results
+
+def vuln_data_json_generate(default_dir):
+    json_return_data = []  # A variable to store the data this function will return
+
+    # Looping through each text file in the specified directory
+    for filename in os.listdir(f'{default_dir}/Vulnerability_Scans'):
+        # Process files that have '.txt' extension and contain 'affected_hosts' in the name
+        if filename.endswith('.txt') and 'affected_hosts' in filename:
+            with open(rf'{default_dir}/Vulnerability_Scans/{filename}', 'r') as file:
+                vuln_dict = {}  # Dictionary to store counts of vulnerabilities
+
+                lines = file.read().splitlines()
+
+                for finding in lines:  # Loop through the lines in the current vulnerability scan file
+                    # Split the line by ' - ' delimiter and extract relevant fields
+                    parts = finding.split(' - ')
+                    if len(parts) >= 2:
+                        severity = parts[0].strip()  # First field: severity (e.g., 'medium')
+                        description = parts[1].strip()  # Second field: vulnerability description (e.g., 'SMB Signing Not Required')
+
+                        # Combine severity and description as a unique key
+                        vuln_key = f"{severity} - {description}"
+
+                        # Increment the count if this vulnerability already exists, otherwise set it to 1
+                        if vuln_key in vuln_dict:
+                            vuln_dict[vuln_key] += 1
+                        else:
+                            vuln_dict[vuln_key] = 1
+
+                # Convert the vulnerability dictionary to a list of dictionaries with count, severity, and description
+                vuln_list = [{'severity': key.split(' - ')[0], 'description': key.split(' - ')[1], 'count': count}
+                             for key, count in vuln_dict.items()]
+
+                filename_trimmed = filename.removesuffix('.txt').lower()  # Trim the file extension and convert to lowercase
+                data_tmp = {filename_trimmed: vuln_list.copy()}  # Store the vulnerability data for the current file
+                json_return_data.append(data_tmp.copy())  # Append the data to the final JSON structure
+
+            file.close()
+
+    return json_return_data  # Return the generated JSON structure
+
+def default_login_data_json_generate(default_dir):
+    json_return_data = []  # A variable to store the data this function will return
+
+    # Looping through each text file in the specified directory
+    for filename in os.listdir(f'{default_dir}/Insecure_Default_Configuration/Default_Logins'):
+        # Process files that have '.txt' extension and contain 'affected_hosts' in the name
+        if filename.endswith('.txt') and 'affected_hosts' in filename:
+            with open(rf'{default_dir}/Insecure_Default_Configuration/Default_Logins/{filename}', 'r') as file:
+                vuln_dict = {}  # Dictionary to store counts of vulnerabilities
+
+                lines = file.read().splitlines()
+
+                for finding in lines:  # Loop through the lines in the current vulnerability scan file
+                    # Split the line by ' - ' delimiter and extract relevant fields
+                    parts = finding.split(' - ')
+                    if len(parts) >= 2:
+                        severity = parts[0].strip()  # First field: severity (e.g., 'medium')
+                        description = parts[1].strip()  # Second field: vulnerability description (e.g., 'SMB Signing Not Required')
+
+                        # Combine severity and description as a unique key
+                        vuln_key = f"{severity} - {description}"
+
+                        # Increment the count if this vulnerability already exists, otherwise set it to 1
+                        if vuln_key in vuln_dict:
+                            vuln_dict[vuln_key] += 1
+                        else:
+                            vuln_dict[vuln_key] = 1
+
+                # Convert the vulnerability dictionary to a list of dictionaries with count, severity, and description
+                vuln_list = [{'severity': key.split(' - ')[0], 'description': key.split(' - ')[1], 'count': count}
+                             for key, count in vuln_dict.items()]
+
+                filename_trimmed = filename.removesuffix('.txt').lower()  # Trim the file extension and convert to lowercase
+                data_tmp = {filename_trimmed: vuln_list.copy()}  # Store the vulnerability data for the current file
+                json_return_data.append(data_tmp.copy())  # Append the data to the final JSON structure
+
+            file.close()
+
+    return json_return_data  # Return the generated JSON structure
 
 # Returns a list of dictionaries for the ports and their associated counts, grouped by cleartext protocol
 def port_data_json_generate(default_dir):
@@ -801,6 +878,28 @@ def port_data_json_generate(default_dir):
 
     return json_return_data_sorted # Returning all of the cleartext protocol data
 
+def smb_data_json_generate(default_dir):
+    json_return_data = {}  # Creating the dictionary that will be returned later
+    current_count = 0  # Keeps track of the current value being counted
+
+    # Use glob to find all files that end with 'SMB_Signing_Disabled.txt'
+    smb_files = glob.glob(f'{default_dir}/Insecure_Default_Configuration/SMB_Signing/*_SMB_Signing_Disabled.txt')
+
+    if smb_files:  # Check if any files are found
+        for filename in smb_files:
+            try:
+                with open(filename, 'r') as file:
+                    lines = file.read().splitlines()  # Gets the lines from the file
+                    current_count += len(lines)  # Add the count of lines from this file to the total count
+            except FileNotFoundError:
+                pass  # If for some reason a file is missing, just skip it
+
+        json_return_data['smb_signing_disabled'] = current_count  # Add the total count to the return data
+    else:
+        # If no files are found, set count to 0
+        json_return_data['smb_signing_disabled'] = 0
+
+    return json_return_data
 
 # A function that collects and returns the host data from a mesa port scan
 def host_data_json_generate(default_dir):
@@ -843,7 +942,6 @@ def consolidated_scope_get_count(default_dir):
             return current_count
     except FileNotFoundError:
         return current_count
-
 
 # The main function of this script that calls all other generation functions to create the json output
 def generate_json_file(filename, default_dir, rv_num):
@@ -891,6 +989,24 @@ def generate_json_file(filename, default_dir, rv_num):
         except Exception as e:
             print(f"Warning: Failed to generate web applications data. Error: {e}")
             output_json["web_applications"] = []
+
+        try:
+            output_json["default_logins"] = default_login_data_json_generate(default_dir)
+        except Exception as e:
+            print(f"Warning: Failed to generate default login data. Error: {e}")
+            output_json["default_logins"] = []
+
+        try:
+            output_json["vulnerability_scans"] = vuln_data_json_generate(default_dir)
+        except Exception as e:
+            print(f"Warning: Failed to generate vulnerability data. Error: {e}")
+            output_json["vulnerability_scans"] = []
+
+        try:
+            output_json["smb_signing"] = smb_data_json_generate(default_dir)
+        except Exception as e:
+            print(f"Warning: Failed to generate smb signing data. Error: {e}")
+            output_json["smb_signing"] = []
 
         # Format the generated JSON data to JSON format
         formatted_json = json.dumps(output_json, indent=2)
