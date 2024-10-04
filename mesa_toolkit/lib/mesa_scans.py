@@ -34,6 +34,7 @@ SMB_SIGNING_FOLDERS = '_Scans/Insecure_Default_Configuration/SMB_Signing/'
 PASS_POLICY_FOLDERS = '_Scans/Password_Policy/'
 EXTENSIONS_TO_REMOVE = [".failed", ".complete", ".intermediate-complete", ".started"]
 ROOT_DIRECTORY = 'data/'
+LIVE_HOSTS_FILE = 'Port_Scans/DISCOVERY/Parsed-Results/Host-Lists/Alive-Hosts-Open-Ports.txt'
 
 def cleanup_empty_files(path="."):
     for (dirpath, folder_names, files) in os.walk(path):
@@ -52,24 +53,6 @@ def safe_count_lines(filename):
     except FileNotFoundError:
         print(f"Warning: File '{filename}' not found. Returning 0.")
         return 0
-
-def capture_variables(rv_num,discovery_file,tcp_ports_file,aquatone_urls_file):
-    # Safely count file-based metrics
-    live_hosts = safe_count_lines(discovery_file)
-    unique = safe_count_lines(tcp_ports_file)
-    web_servers = safe_count_lines(aquatone_urls_file)
-
-    # Safely sum values for multiple files
-    cleartext_hosts = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Encryption_Check/Cleartext_Protocols/*.txt"))
-    default_logins = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/Default_Logins/*affected_hosts.txt"))
-    unique_vulns = len(set(line.split('-')[1] for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*affected_hosts.txt") for line in open(file, 'r', errors='ignore')))
-
-    critical_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_critical_affected_hosts.txt"))
-    high_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_high_affected_hosts.txt"))
-    medium_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_medium_affected_hosts.txt"))
-    low_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_low_affected_hosts.txt"))
-    info_vulns = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Vulnerability_Scans/*_informational_affected_hosts.txt"))
-    smb_sign_disable = sum(safe_count_lines(file) for file in glob.glob(f"data/{rv_num}-all_checks/Insecure_Default_Configuration/SMB_Signing/*_SMB_Signing_Disabled.txt"))
 
 # Function to remove files with specific extensions
 def remove_files_with_extensions(dir_path, extensions):
@@ -436,7 +419,7 @@ def report_generator(rv_num, customer_name, customer_initials):
     # Define locations for input files
     scope_file = f"data/{rv_num}-all_checks/scope.txt"
     exclusions_file = f"data/{rv_num}-all_checks/exclusions.txt"
-    discovery_file = f"data/{rv_num}-all_checks/Port_Scans/DISCOVERY/Parsed-Results/Host-Lists/Alive-Hosts-Open-Ports.txt"
+    discovery_file = f"data/{rv_num}-all_checks/{LIVE_HOSTS_FILE}"
     tcp_ports_file = f"data/{rv_num}-all_checks/Port_Scans/FULL/Parsed-Results/Port-Lists/TCP-Ports-List.txt"
     aquatone_urls_file = f"data/{rv_num}-all_checks/Web_App_Enumeration/aquatone_urls.txt"
 
@@ -592,7 +575,7 @@ def json_generator(rv_num, customer_name, customer_initials):
     # Define locations for input files
     scope_file = f"data/{rv_num}-all_checks/scope.txt"
     exclusions_file = f"data/{rv_num}-all_checks/exclusions.txt"
-    discovery_file = f"data/{rv_num}-all_checks/Port_Scans/DISCOVERY/Parsed-Results/Host-Lists/Alive-Hosts-Open-Ports.txt"
+    discovery_file = f"data/{rv_num}-all_checks/{LIVE_HOSTS_FILE}"
     tcp_ports_file = f"data/{rv_num}-all_checks/Port_Scans/FULL/Parsed-Results/Port-Lists/TCP-Ports-List.txt"
     aquatone_urls_file = f"data/{rv_num}-all_checks/Web_App_Enumeration/aquatone_urls.txt"
 
@@ -696,7 +679,7 @@ def located_in_file(file_to_read, string_to_find):
 def get_live_hosts(default_dir):
     # Open the file that lists live hosts
     try:
-        with open(rf'{default_dir}/Port_Scans/FULL/Parsed-Results/Host-Lists/Alive-Hosts-ICMP.txt', 'r') as file:
+        with open(rf'{default_dir}/{LIVE_HOSTS_FILE}', 'r') as file:
             lines = file.read().splitlines()
             count = 0
             for element in lines: # Loop through and increment the count of live hosts
@@ -908,7 +891,7 @@ def host_data_json_generate(default_dir):
 
     # Open the file containing the hosts with open ports
     try:
-        with open(rf'{default_dir}/Port_Scans/FULL/Parsed-Results/Host-Lists/Alive-Hosts-Open-Ports.txt', 'r') as file:
+        with open(rf'{default_dir}/{LIVE_HOSTS_FILE}', 'r') as file:
             lines = file.read().splitlines() # Gets the lines from the file
             for finding in lines: # Loops through the lines and keeps track of the count
                 current_count = current_count + 1
