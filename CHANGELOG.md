@@ -1,4 +1,19 @@
 # Changelog
+## [v2.2.0] - 10/04/2024
+- Reduce duplicative functions
+- Add vulnerability, default login, and smb signing data to json output
+- Modify naming convention for json output
+
+## [v2.1.1] - 09/25/2024
+- Add missing PDF generator dependencies
+
+## [v2.1.0] - 09/25/2024
+- Ensure report generator function generates report without requiring all scans be completed
+
+## [v2.0.0] - 09/24/2024
+- Add ability to generate PDF report
+- Add ability to generate JSON file containing anonymized summary of findings
+
 ## [v1.0.0] - 07/22/2024
 - Remove unnecessary domain enumeration functions
 - Remove domain enumeration flags from CLI
