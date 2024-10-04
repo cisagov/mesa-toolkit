@@ -17,7 +17,7 @@ The following tools must be installed on the system:
 
 These dependencies can be installed via the `mesa-install-tools.sh` script. All dependencies including the tool itself will be created in a virtual environment located with the `/opt` directory. 
 
-To install the tool on a Debian 12 virtual machine run the following string:
+To install the tool on a `Debian 12.7.0` virtual machine run the following string:
 
 ```
 sudo bash mesa-install-tools.sh -vm
@@ -117,6 +117,9 @@ cd MESA-Toolkit
 poetry install
 poetry run MESA-Toolkit --help
 ```
+
+## Limitations
+Development and testing for this project has been done on a `Debian 12.7.0 amd64` operating system. Additional operating systems have not been tested for compatibility. 
 
 ## Credits
 https://github.com/coffeegist/cookiecutter-app
