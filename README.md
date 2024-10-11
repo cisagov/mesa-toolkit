@@ -4,7 +4,9 @@ MESAs (Micro Evaluation Security Assessments) have been crafted to offer organiz
 
 It is important to note that MESAs are not designed to furnish a comprehensive understanding of the entire internal environment. Instead, their purpose is to equip organizations with the essential information needed to establish a foundational security posture. This emphasis revolves around safeguarding against commonly exploited misconfigurations and vulnerabilities. MESAs lay the groundwork for organizations to initiate the process of fortifying their security stance, ensuring a proactive defense against prevalent risks.
 
-## Dependencies
+## Install
+
+### Dependencies
 
 The following tools must be installed on the system:
 * Aquatone (https://github.com/michenriksen/aquatone)
@@ -15,20 +17,23 @@ The following tools must be installed on the system:
 
 These dependencies can be installed via the `mesa-install-tools.sh` script. All dependencies including the tool itself will be created in a virtual environment located with the `/opt` directory. 
 
-To install the tool on a Debian 12 virtual machine run the following string:
+To install the tool on a `Debian 12.7.0` virtual machine run the following string:
 
 ```
-bash mesa-install-tools.sh -vm
+sudo bash mesa-install-tools.sh -vm
 ```
 
 To install the tool on a Raspberry Pi running Kali run the following string:
 
 ```
-bash mesa-install-tools.sh -pi
+sudo bash mesa-install-tools.sh -pi
 ```
 
-## Install
-MESA-Toolkit can be installed by cloning this repository and running `pip3 install .` and subsequently executed from PATH with MESA-Toolkit
+Once the dependencies have been installed within the virtual environment, source the virtual environment in order to run the tool.
+
+```
+source /opt/MESA-venv/bin/activate
+```
 
 ## Usage
 
@@ -98,6 +103,12 @@ MESA-Toolkit -o all_checks -p <Project_Name> -i <Target_File> [-e Exclude_File]
 MESA-Toolkit -o report_generator -p <Project_Name> -cn <Customer_Name> -ci <Customer_Initials>
 ```
 
+`json_generator` - This operation will create a json file that aggregates the raw data into a standardized anonymized format.
+
+```
+MESA-Toolkit -o json_generator -p <Project_Name> -cn <Customer_Name> -ci <Customer_Initials>
+```
+
 ## Development
 MESA-Toolkit uses Poetry to manage dependencies. Install from source and setup for development with:
 ```
@@ -106,6 +117,9 @@ cd MESA-Toolkit
 poetry install
 poetry run MESA-Toolkit --help
 ```
+
+## Limitations
+Development and testing for this project has been done on a `Debian 12.7.0 amd64` operating system. Additional operating systems have not been tested for compatibility. 
 
 ## Credits
 https://github.com/coffeegist/cookiecutter-app
