@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 #Created by Miguel Rios
+import sys
 import typer
 from enum import Enum
 from pathlib import Path
@@ -54,41 +55,49 @@ def main(
     if exclude_file:
         exclude_file=str(exclude_file)
 
+    success = True
+
     if operation == Operations.scoper:
-        scoper(project_name, input_file, exclude_file)
+        success = scoper(project_name, input_file, exclude_file)
 
-    if operation == Operations.masscan:
-        masscan(project_name, input_file, exclude_file)
+    elif operation == Operations.masscan:
+        success = masscan(project_name, input_file, exclude_file)
 
-    if operation == Operations.discovery:
-        discovery(project_name, input_file, exclude_file)
+    elif operation == Operations.discovery:
+        success = discovery(project_name, input_file, exclude_file)
 
-    if operation == Operations.full:
-        full_port(project_name, input_file, exclude_file)
+    elif operation == Operations.full:
+        success = full_port(project_name, input_file, exclude_file)
 
-    if operation == Operations.aquatone:
-        aquatone(project_name, input_file, exclude_file)
+    elif operation == Operations.aquatone:
+        success = aquatone(project_name, input_file, exclude_file)
 
-    if operation == Operations.encryption_check:
-        encryption_check(project_name, input_file, exclude_file)
+    elif operation == Operations.encryption_check:
+        success = encryption_check(project_name, input_file, exclude_file)
 
-    if operation == Operations.default_logins:
-        default_logins(project_name, input_file, exclude_file)
+    elif operation == Operations.default_logins:
+        success = default_logins(project_name, input_file, exclude_file)
 
-    if operation == Operations.smb_signing_check:
-        smb_signing_check(project_name, input_file, exclude_file)
+    elif operation == Operations.smb_signing_check:
+        success = smb_signing_check(project_name, input_file, exclude_file)
 
-    if operation == Operations.vuln_scans:
-        vuln_scans(project_name, input_file, exclude_file)
+    elif operation == Operations.vuln_scans:
+        success = vuln_scans(project_name, input_file, exclude_file)
 
-    if operation == Operations.all_checks:
-        all_checks(project_name, input_file, exclude_file)
+    elif operation == Operations.all_checks:
+        success = all_checks(project_name, input_file, exclude_file)
 
-    if operation == Operations.report_generator:
-        report_generator(project_name, customer_name, customer_initials)
+    elif operation == Operations.report_generator:
+        success = report_generator(project_name, customer_name, customer_initials)
 
-    if operation == Operations.json_generator:
-        json_generator(project_name, customer_name, customer_initials)
+    elif operation == Operations.json_generator:
+        success = json_generator(project_name, customer_name, customer_initials)
+
+    if not success:
+        logger.error(f"Operation {operation} failed")
+        sys.exit(1)
+    else:
+        logger.info(f"Operation {operation} completed successfully")
 
 if __name__ == '__main__':
     app(prog_name='MESA-Toolkit')
