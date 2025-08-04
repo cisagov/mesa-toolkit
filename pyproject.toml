@@ -9,14 +9,18 @@ repository = "https://github.com/m1j09830/MESA-Toolkit"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-rich = "^12.5.1"
-typer = "^0.6.1"
+rich = "^13.9.0"
+typer = "^0.15.0"
+click = "^8.1.7"
 jinja2 = "^3.1.6"
+pdfkit = "^1.0.0"
 
 [tool.poetry.dev-dependencies]
-pylint = "^2.13"
-pytest = "^7.1.2"
+pylint = "^3.0"
+pytest = "^8.0"
 pytest-mock = "^3.11.1"
+black = "^24.0.0"
+mypy = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core"]
