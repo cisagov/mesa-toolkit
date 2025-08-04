@@ -1308,6 +1308,27 @@ def consolidated_scope_get_count(default_dir):
     except FileNotFoundError:
         return current_count
 
+def get_current_fiscal_year():
+    """
+    Calculate the current federal fiscal year based on the current date.
+    Federal fiscal year runs from October 1st through September 30th.
+    
+    Returns:
+        str: The current fiscal year as a string (e.g., "2026")
+    """
+    now = datetime.now()
+    current_year = now.year
+    current_month = now.month
+    
+    # If we're in October, November, or December, it's the next calendar year's fiscal year
+    if current_month >= 10:
+        fiscal_year = current_year + 1
+    else:
+        # If we're in January through September, it's the current calendar year's fiscal year
+        fiscal_year = current_year
+    
+    return str(fiscal_year)
+
 # The main function of this script that calls all other generation functions to create the json output
 def generate_json_file(filename, default_dir, rv_num):
     try:
@@ -1315,7 +1336,7 @@ def generate_json_file(filename, default_dir, rv_num):
         output_json = {
             "type": "Micro Evaluation Security Assessment (MESA)",
             "id": rv_num,
-            "fiscal_year": "2024",
+            "fiscal_year": get_current_fiscal_year(),
             "sector": "",
             "critical_infrastructure_sector": "",
             "critical_infrastructure_subsector": "",
